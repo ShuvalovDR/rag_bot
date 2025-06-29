@@ -1,14 +1,9 @@
-version: "3.8"
-
 services:
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
-    restart: unless-stopped
-    networks:
-      - app-network
 
   rag_bot:
     build: .
@@ -22,16 +17,4 @@ services:
       - BOT_KEY=${BOT_KEY}
       - BASE_URL=${BASE_URL}
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+    runtime: nvidia
