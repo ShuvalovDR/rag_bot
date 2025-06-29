@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import tempfile
 from pathlib import Path
 from uuid import uuid4
+import torch
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
@@ -23,7 +24,7 @@ llm_service = LLMService()
 asr = pipeline(
     "automatic-speech-recognition",
     model="openai/whisper-small",
-    device="cuda:0"
+    device="cuda:0" if torch.cuda.is_available() else "cpu"
 )
 
 def get_order_keyboard():
