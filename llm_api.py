@@ -13,6 +13,8 @@ from langchain_redis import RedisChatMessageHistory
 from vector_store import init_ensemble_retriever
 from last_state_storage import LastStateStorage
 
+REDIS_URL = f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', 6379)}"
+
 class LLMService:
     def __init__(self):
         self.model = ChatOpenAI(
@@ -98,11 +100,11 @@ class LLMService:
         return "\n".join(rag_recommendations)
 
     def clear_user_history(self, user_id):
-        user_history = RedisChatMessageHistory(session_id=user_id)
+        user_history = RedisChatMessageHistory(redis_url=REDIS_URL, session_id=user_id)
         user_history.clear()
 
     def generate(self, user_id: str, user_query: str) -> str:
-        user_history = RedisChatMessageHistory(session_id=user_id)
+        user_history = RedisChatMessageHistory(redis_url=REDIS_URL, session_id=user_id)
         last_state = self.last_state_storage.get_order(user_id)
 
         if len(user_history.messages) == 0:
