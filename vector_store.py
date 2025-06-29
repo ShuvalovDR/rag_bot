@@ -52,14 +52,14 @@ def init_faiss_retriever(file_path: str, k: int, device: str = "cpu") -> VectorS
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,
         model_kwargs={"device": device},
-        encode_kwargs={"normalize_embeddings": True} 
+        encode_kwargs={"normalize_embeddings": True}
     )
 
     vector_db = FAISS.from_documents(
         documents= documents,
         embedding=embeddings
     )
-    
+
     return vector_db.as_retriever(search_kwargs={'k': k})
 
 def init_bm25_retriever(file_path: str, k: int) -> VectorStoreRetriever:
@@ -83,16 +83,3 @@ def init_bm25_retriever(file_path: str, k: int) -> VectorStoreRetriever:
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = k
     return bm25_retriever
-    
-
-
-
-
-    
-
-
-
-
-
-
-

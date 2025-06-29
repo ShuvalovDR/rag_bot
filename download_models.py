@@ -13,14 +13,14 @@ def download_models():
         model="openai/whisper-small",
         device="cuda:0" if torch.cuda.is_available() else "cpu",
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-    )   
+    )
 
     logger.info("Downloading text embedding model...")
     embedding_model = SentenceTransformer(
         "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         device="cuda:0" if torch.cuda.is_available() else "cpu"
     )
-    
+
     logger.info("All models downloaded successfully!")
 
 if __name__ == "__main__":

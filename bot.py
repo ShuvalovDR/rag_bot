@@ -60,7 +60,7 @@ async def handle_voice(message: Message):
             except Exception as e:
                 logging.error(f"Ошибка распознавания голоса: {e}", exc_info=True)
                 await message.answer("Не удалось распознать голос. Попробуйте ещё раз.")
-            
+
             user_id = str(message.from_user.id)
             try:
                 llm_answer = llm_service.generate(user_id, user_query)
