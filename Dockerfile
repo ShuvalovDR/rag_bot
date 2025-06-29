@@ -35,9 +35,8 @@ WORKDIR /app
 ENV HF_XET_NUM_CONCURRENT_RANGE_GETS=32
 ENV HF_XET_MAX_CONCURRENT_DOWNLOADS=4
 
-RUN git clone https://github.com/ShuvalovDR/rag_bot.git . \
-    && rm -rf .git \
-    && python3 download_models.py
+COPY . /app
+RUN python3 download_models.py
 
 WORKDIR /app
 

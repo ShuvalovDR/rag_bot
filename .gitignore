@@ -2,6 +2,6 @@
 *.ipynb
 .ipynb_checkpoints/
 __pycache__/
-*yml
 *.txt
-run.sh
+*.sh
+.dockerignore

@@ -8,6 +8,7 @@ from uuid import uuid4
 import torch
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
@@ -45,17 +46,27 @@ async def cmd_start(message: Message):
 
 @dp.message(F.voice)
 async def handle_voice(message: Message):
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
             voice_path = tmp_path / f"voice_{str(uuid4())}.ogg"
             voice_file = await bot.get_file(message.voice.file_id)
             await bot.download_file(voice_file.file_path, destination=str(voice_path))
-            with open(voice_path, "rb") as audio_file:
-                transcript = asr(audio_file.read())
-            user_query = transcript["text"]
+            try:
+                with open(voice_path, "rb") as audio_file:
+                    transcript = asr(audio_file.read())
+                user_query = transcript["text"]
+            except Exception as e:
+                logging.error(f"Ошибка распознавания голоса: {e}", exc_info=True)
+                await message.answer("Не удалось распознать голос. Попробуйте ещё раз.")
+            
             user_id = str(message.from_user.id)
-            llm_answer = llm_service.generate(user_id, user_query)
+            try:
+                llm_answer = llm_service.generate(user_id, user_query)
+            except Exception as e:
+                logging.error(f"Ошибка генерации ответа LLM: {e}", exc_info=True)
+                await message.answer("Произошла ошибка при генерации ответа. Попробуйте позже.")
 
             answer_lower = llm_answer.lower()
 
@@ -70,14 +81,19 @@ async def handle_voice(message: Message):
                 await message.answer(llm_answer)
 
     except Exception as e:
-        logging.error(f"Ошибка обработки голоса: {e}", exc_info=True)
-        await message.answer("Не удалось распознать голос. Попробуйте ещё раз.")
+        logging.error(f"Неизвестная ошибка при обработке голосового сообщения: {e}", exc_info=True)
+        await message.answer("Произошла неизвестная ошибка. Попробуйте позже.")
 
 @dp.message(F.text)
 async def handle_text(message: Message):
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     user_query = message.text
     user_id = str(message.from_user.id)
-    llm_answer = llm_service.generate(user_id, user_query)
+    try:
+        llm_answer = llm_service.generate(user_id, user_query)
+    except Exception as e:
+        logging.error(f"Ошибка генерации ответа LLM: {e}", exc_info=True)
+        await message.answer("Произошла ошибка при генерации ответа. Попробуйте позже.")
 
     answer_lower = llm_answer.lower()
 
@@ -90,6 +106,10 @@ async def handle_text(message: Message):
         )
     else:
         await message.answer(llm_answer)
+
+@dp.message(~(F.content_type.in_({"text", "voice"})))
+async def handle_other(message: Message):
+    await message.answer("Извините, я понимаю только текст и голосовые сообщения.")
 
 @dp.callback_query(F.data == "submit_order")
 async def process_order_submission(callback: CallbackQuery):
