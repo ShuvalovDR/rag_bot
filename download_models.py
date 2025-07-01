@@ -1,3 +1,4 @@
+from typing import Tuple
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 import torch
@@ -6,7 +7,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def download_models():
+def download_models() -> Tuple[SentenceTransformer, SentenceTransformer]:
     logger.info("Downloading speech recognition model...")
     asr_model = pipeline(
         "automatic-speech-recognition",
@@ -22,6 +23,7 @@ def download_models():
     )
 
     logger.info("All models downloaded successfully!")
+    return asr_model, embedding_model
 
 if __name__ == "__main__":
     download_models()

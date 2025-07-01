@@ -2,6 +2,7 @@ import os
 import json
 import re
 from typing import List
+import torch
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import trim_messages, HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import PromptTemplate
@@ -16,25 +17,31 @@ from last_state_storage import LastStateStorage
 REDIS_URL = f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', 6379)}"
 
 class LLMService:
-    def __init__(self):
+    def __init__(
+            self, 
+            model: str = "gpt-4.1-mini", 
+            rag_file_path: str = "./rag_data/knowledgebase.csv",
+            system_prompt_template_path: str = "./prompt_templates/system_prompt.txt",
+            user_prompt_template_path: str = "./prompt_templates/user_prompt.txt"
+    ):
         self.model = ChatOpenAI(
             base_url=os.getenv("BASE_URL"),
-            model="gpt-4.1-mini",
+            model=model,
             api_key=os.getenv("LLM_KEY")
         )
 
         self.retriever = init_ensemble_retriever(
-            file_path="./rag_data/knowledgebase.csv",
-            device="cuda:0",
+            file_path=rag_file_path,
+            device="cuda:0" if torch.cuda.is_available() else "cpu",
             k=3
         )
 
         self.last_state_storage = LastStateStorage()
 
-        with open("./prompt_templates/system_prompt.txt", encoding="utf-8") as f:
+        with open(system_prompt_template_path, encoding="utf-8") as f:
             self.system_prompt = SystemMessage(content=f.read())
 
-        with open("./prompt_templates/user_prompt.txt", encoding="utf-8") as f:
+        with open(user_prompt_template_path, encoding="utf-8") as f:
             template = f.read()
         self.prompt_template = PromptTemplate.from_template(template)
 
@@ -54,18 +61,15 @@ class LLMService:
         before_json = llm_output[:match.start()].strip()
         after_json = llm_output[match.end():].strip()
 
-        # 2. Пытаемся распарсить JSON
         try:
             order_data = json.loads(raw_json)
         except json.JSONDecodeError:
             return None, "К сожалению, я Вас не понял, попробуем ещё раз."
 
-        # 3. Приводим к единому формату, если заказ был строковым списком
         items = order_data.get("order", [])
         if isinstance(items, list) and all(isinstance(i, str) for i in items):
             items = [{"name": name, "count": 1} for name in items]
 
-        # 4. Формируем вывод
         lines = ["ℹ️ Ваш заказ:"]
         for item in items:
             name = item.get("name", None)
@@ -128,6 +132,7 @@ class LLMService:
         last_messages.append(HumanMessage(content=prompt))
         llm_output = self.llm_chain.invoke(last_messages)
         order_data, formatted_text = self._parse_json(llm_output)
-        self.last_state_storage.set_order(user_id, order_data)
+        if order_data is not None:
+            self.last_state_storage.set_order(user_id, order_data)
         user_history.add_message(AIMessage(content=llm_output))
         return formatted_text

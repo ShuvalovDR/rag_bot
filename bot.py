@@ -21,7 +21,7 @@ TOKEN = os.getenv("BOT_KEY")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-llm_service = LLMService()
+llm_service = LLMService(model="gpt-4.1-mini")
 asr = pipeline(
     "automatic-speech-recognition",
     model="openai/whisper-small",
