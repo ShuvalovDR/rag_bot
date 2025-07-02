@@ -1,5 +1,6 @@
 # Operator Telegram Bot
-
+⚠️ **WARNING!**\
+**ALL PRICES ARE AI GENERATED! FOR ACADEMIC PURPOSES ONLY!**
 ## How to run
 1.  Create enviroment variables
 ```bash
