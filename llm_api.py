@@ -22,7 +22,8 @@ class LLMService:
             model: str = "gpt-4.1-mini", 
             rag_file_path: str = "./rag_data/knowledgebase.csv",
             system_prompt_template_path: str = "./prompt_templates/system_prompt.txt",
-            user_prompt_template_path: str = "./prompt_templates/user_prompt.txt"
+            user_prompt_template_path: str = "./prompt_templates/user_prompt.txt",
+            prices_file_path: str = "./rag_data/prices.json"
     ):
         self.model = ChatOpenAI(
             base_url=os.getenv("BASE_URL"),
@@ -37,6 +38,9 @@ class LLMService:
         )
 
         self.last_state_storage = LastStateStorage()
+
+        with open(prices_file_path, encoding="utf-8") as f:
+            self.prices = json.load(f)
 
         with open(system_prompt_template_path, encoding="utf-8") as f:
             self.system_prompt = SystemMessage(content=f.read())
@@ -66,6 +70,7 @@ class LLMService:
         except json.JSONDecodeError:
             return None, "К сожалению, я Вас не понял, попробуем ещё раз."
 
+        total_price = 0.0
         items = order_data.get("order", [])
         if isinstance(items, list) and all(isinstance(i, str) for i in items):
             items = [{"name": name, "count": 1} for name in items]
@@ -74,10 +79,11 @@ class LLMService:
         for item in items:
             name = item.get("name", None)
             count = item.get("count", 0)
-            if name is None or count <= 0:
+            price = self.prices.get(name, None)
+            if name is None or count <= 0 or price is None:
                 continue
-            lines.append(f"• {name} — x{count} шт.")
-
+            lines.append(f"• {name} — x{count} шт. ({price:.2f}₽/шт) = {price * count:.2f}₽")
+            total_price += price * count
         if len(lines) == 1:
             order_text = "ℹ️ Ваш заказ пуст"
         else:
@@ -89,7 +95,8 @@ class LLMService:
         parts.append(order_text)
         if after_json and after_json != raw_json:
             parts.append(after_json)
-
+        if len(lines) > 1:
+            parts.append(f"Итого: {total_price:.2f}₽")
         return order_data, "\n\n".join(parts)
 
     def _format_recommendations(self, docs: List[Document]) -> str:
